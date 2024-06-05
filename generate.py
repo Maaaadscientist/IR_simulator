@@ -1,5 +1,7 @@
-from simulator import Photon, BookGeometry,visualize_geometry 
 import numpy as np
+
+from simulator import Photon, BookGeometry,visualize_geometry 
+from reflectance import ReflectanceCalculator
 
 # Example usage
 geometry = BookGeometry(30)
@@ -15,6 +17,16 @@ print(dx,dy,dz)
 #    dz = -1
 #else:
 #    dz = 1
+# Initialize the ReflectanceCalculator with the path to your CSV file
+file_path = 'reflectance.csv'
+reflectance_calculator = ReflectanceCalculator(file_path)
+
+# Example usage within the simulation
+wavelength = 405
+angle_rad = np.radians(15)  # Example angle in radians
+reflectance = reflectance_calculator.get_reflectance(wavelength, angle_rad)
+print(f'Reflectance at {wavelength} nm and {np.degrees(angle_rad)} degrees: {reflectance}')
+
 photon = Photon(x, y, z, dx, dy, dz, geometry)
 while (photon.status != "absorbed"):
     print(f"Photon status: {photon.status}, Surface: {photon.surface}, Channel: {photon.channel}, direction: {photon.direction}")
