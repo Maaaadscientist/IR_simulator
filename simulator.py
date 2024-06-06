@@ -125,6 +125,7 @@ class BookGeometry(Geometry):
         self.square_size = 50.0  # size of the squares in mm
         self.squares = self._compute_square_planes()
         self.dcr = np.full(32, 5600.0)  # default DCR value
+        self.crosstalk = np.full(32, 0.15)
         if dcr_file and os.path.exists(dcr_file):
             self._read_dcr_from_csv(dcr_file)
         self._generate_cumulative_dcr()
@@ -189,19 +190,6 @@ class BookGeometry(Geometry):
                 return normal
         return None
 
-    #def generate_isotropic_direction(self, normal):
-    #    phi = np.random.uniform(0, 2 * np.pi)
-    #    costheta = np.random.uniform(-1, 1)
-    #    theta = np.arccos(costheta)
-    #    direction = np.array([
-    #        np.sin(theta) * np.cos(phi),
-    #        np.sin(theta) * np.sin(phi),
-    #        np.cos(theta)
-    #    ])
-
-    #    # Rotate the direction to align with the normal vector
-    #    rotation_matrix = self._rotation_matrix_from_vectors(np.array([0, 0, 1]), normal)
-    #    return rotation_matrix @ direction
     def generate_isotropic_direction(self, normal, angle= 0.5* np.pi):
         """
         Generate a random direction within a cone centered around the given normal vector.
@@ -311,28 +299,6 @@ class BookGeometry(Geometry):
             in_plane_y = 0 <= point[1] <= self.square_size * np.cos(angle)
             return z_correct and in_plane_x and in_plane_y
 
-    #def _is_point_within_square(self, point, plane_point, plane_normal):
-    #    """
-    #    Check if a point is within the bounds of the square.
-
-    #    Parameters:
-    #    point (np.array): The point to check.
-    #    plane_point (np.array): A point on the plane.
-    #    plane_normal (np.array): The normal vector of the plane.
-
-    #    Returns:
-    #    bool: True if the point is within the square, False otherwise.
-    #    """
-    #    if np.allclose(plane_normal, [0, 0, 1]) or np.allclose(plane_normal, [0, 0, -1]):
-    #        in_plane_x = plane_point[0] <= point[0] <= plane_point[0] + self.square_size
-    #        in_plane_y = plane_point[1] <= point[1] <= plane_point[1] + self.square_size
-    #        return in_plane_x and in_plane_y
-    #    else:
-    #        # For the second plane, transformed coordinates need to be checked
-    #        rotated_point = self._rotate_point_back_to_plane(point, plane_normal)
-    #        in_plane_x = 0 <= rotated_point[0] <= self.square_size
-    #        in_plane_y = 0 <= rotated_point[1] <= self.square_size
-    #        return in_plane_x and in_plane_y
 
     def _get_channel(self, point, plane_point, plane_normal):
         """
@@ -571,26 +537,3 @@ def visualize_geometry(photon, geometry):
     plt.tight_layout()
     plt.show()
 
-#
-## Example usage
-#geometry = BookGeometry(30)
-##print(geometry.random_dark_event_position())
-##photon = Photon(25, 10, 0, 1, 1, 0.01, geometry)
-#x,y,z = geometry.random_dark_event_position()
-#dx, dy, dz = geometry.generate_isotropic_direction(geometry.get_normal_at_position(np.array([x,y,z])))
-#
-#print(dx,dy,dz)
-##photon = Photon(20, 23, 0, 0, 0, 1, geometry)
-##print(x,y,z)
-##if z > 0:
-##    dz = -1
-##else:
-##    dz = 1
-#photon = Photon(x, y, z, dx, dy, dz, geometry)
-#while (photon.status != "absorbed"):
-#    print(f"Photon status: {photon.status}, Surface: {photon.surface}, Channel: {photon.channel}, direction: {photon.direction}")
-#    print(f"Photon position: {photon.position}, direction: {photon.direction}")
-#    visualize_geometry(photon, geometry)
-#    photon.check_and_update_status(geometry)
-#
-#
