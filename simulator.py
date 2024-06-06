@@ -1,13 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from reflectance import ReflectanceCalculator
 
 class Photon:
-    def __init__(self, x, y, z, dx, dy, dz, geometry):
+    def __init__(self, x, y, z, dx, dy, dz, geometry, wavelength=900):
         self.position = np.array([x, y, z])
         self.direction = np.array([dx, dy, dz])
         self.status = 'active'  # 'active' or 'absorbed'
         self.surface, self.channel = self.init_surface_and_channel(geometry)
+        self.wavelength = wavelength
+        self.reflectance_calculator = ReflectanceCalculator('reflectance.csv')
+        
 
     def init_surface_and_channel(self, geometry):
         """
@@ -52,9 +56,17 @@ class Photon:
         intersection, normal, surface, channel = self.intersects(geometry)
         if intersection is not None:
             self.position = intersection
+            incident_angle = np.arccos(np.dot(-self.direction, normal))
             self.direction = self.reflect(self.direction, normal)
             self.surface = surface
             self.channel = channel
+            
+            # Calculate the incident angle
+            reflectance = self.reflectance_calculator.get_reflectance(self.wavelength, incident_angle)
+            # Determine if the photon is still active based on reflectance
+            if np.random.random() > reflectance:
+                print(f'angle: {incident_angle/ np.pi} * pi and reflectance:{reflectance}')
+                self.status = 'hit'
         else:
             self.status = 'absorbed'
 

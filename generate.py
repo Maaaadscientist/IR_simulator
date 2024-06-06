@@ -7,32 +7,27 @@ from reflectance import ReflectanceCalculator
 geometry = BookGeometry(30)
 #print(geometry.random_dark_event_position())
 #photon = Photon(25, 10, 0, 1, 1, 0.01, geometry)
+fired_channels = []
 x,y,z = geometry.random_dark_event_position()
-dx, dy, dz = geometry.generate_isotropic_direction(geometry.get_normal_at_position(np.array([x,y,z])))
-
-print(dx,dy,dz)
-#photon = Photon(20, 23, 0, 0, 0, 1, geometry)
-#print(x,y,z)
-#if z > 0:
-#    dz = -1
-#else:
-#    dz = 1
-# Initialize the ReflectanceCalculator with the path to your CSV file
-file_path = 'reflectance.csv'
-reflectance_calculator = ReflectanceCalculator(file_path)
-
-# Example usage within the simulation
-wavelength = 405
-angle_rad = np.radians(15)  # Example angle in radians
-reflectance = reflectance_calculator.get_reflectance(wavelength, angle_rad)
-print(f'Reflectance at {wavelength} nm and {np.degrees(angle_rad)} degrees: {reflectance}')
-
-photon = Photon(x, y, z, dx, dy, dz, geometry)
-while (photon.status != "absorbed"):
-    print(f"Photon status: {photon.status}, Surface: {photon.surface}, Channel: {photon.channel}, direction: {photon.direction}")
-    print(f"Photon position: {photon.position}, direction: {photon.direction}")
-    visualize_geometry(photon, geometry)
-    photon.check_and_update_status(geometry)
-
+def generate_and_propagate_photons(x,y,z,lambda_=5, pde=0.1, init_fire=True):
+    for _ in range(np.random.poisson(lambda_)):
+        dx, dy, dz = geometry.generate_isotropic_direction(geometry.get_normal_at_position(np.array([x,y,z])))
+    
+        photon = Photon(x, y, z, dx, dy, dz, geometry)
+        if init_fire:
+            fired_channels.append((photon.surface, photon.channel))
+            init_fire = False
+        while (photon.status == "active"):
+            visualize_geometry(photon, geometry)
+            photon.check_and_update_status(geometry)
+            if photon.status == 'hit':
+                print("hit the surface!")
+                if np.random.random() < pde:
+                    print(f"photon detected, {photon.surface}, {photon.channel}")
+                    fired_channels.append((photon.surface, photon.channel))
+                    x,y,z = photon.position
+                    generate_and_propagate_photons(x,y,z, init_fire=False)
+generate_and_propagate_photons(x,y,z)
+print(fired_channels)
 
 
