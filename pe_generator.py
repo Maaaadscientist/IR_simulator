@@ -110,7 +110,7 @@ if ext != 0:
 
         fired_channels = []
         for _ in range(10):  # Expecting 10 photons per event
-            x, y, z = geometry.random_light_event_position(10, 2)
+            x, y, z = geometry.random_light_event_center(10, 2)
             fired_channels.extend(generate_and_propagate_photons(x, y, z, i))
 
         # Fill the TTree with aggregated data for this event

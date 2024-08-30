@@ -194,6 +194,9 @@ class BookGeometry(Geometry):
         channel = channel_index % 16 + 1
         return self._random_gaussian_position_in_channel(sipm, channel, sigma)
 
+    def random_light_event_center(self, sipm, sigma):
+        return self._random_gaussian_position_in_center(sipm, sigma)
+
     def _random_position_in_channel(self, sipm, channel):
         local_x = ((channel-1) % 4) * (self.square_size / 4) + np.random.random() * (self.square_size / 4)
         local_y = ((channel-1) // 4) * (self.square_size / 4) + np.random.random() * (self.square_size / 4)
@@ -206,6 +209,20 @@ class BookGeometry(Geometry):
         # Calculate the center of the given channel
         center_x = ((channel-1) % 4) * (self.square_size / 4) + (self.square_size / 8)
         center_y = ((channel-1) // 4) * (self.square_size / 4) + (self.square_size / 8)
+
+        # Generate a random position around the center using a Gaussian distribution
+        local_x = np.random.normal(center_x, sigma)
+        local_y = np.random.normal(center_y, sigma)
+
+        if sipm == 1:
+            return np.array([local_x, local_y, 0])
+        else:
+            rotated_position = self._rotate_point_to_plane(np.array([local_x, local_y, 0]))
+            return rotated_position
+    def _random_gaussian_position_in_center(self, sipm, sigma):
+        # Calculate the center of the given channel
+        center_x = self.square_size / 2
+        center_y = self.square_size / 2
 
         # Generate a random position around the center using a Gaussian distribution
         local_x = np.random.normal(center_x, sigma)
