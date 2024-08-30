@@ -10,8 +10,21 @@ class Photon:
         self.status = 'active'  # 'active' or 'absorbed'
         self.surface, self.channel = self.init_surface_and_channel(geometry)
         self.wavelength = wavelength
-        self.reflectance_calculator = ReflectanceCalculator('reflectance.csv')
-        
+        #self.reflectance_calculator = ReflectanceCalculator('reflectance.csv')
+        self.reflectance_calculator = ReflectanceCalculator('/Users/allen/codes/IR_simulator/reflectance.csv')
+        self.surface_position = self.calculate_surface_position()
+    
+    def calculate_surface_position(self):
+        x, y, z = self.position
+        if z == 0:
+            # Photon is on the bottom surface
+            return np.array([x, y])
+        elif z > -1e-10:
+            # Photon is on the top surface, recalculate y
+            y_prime = np.sqrt(y**2 + z**2)
+            return np.array([x, y_prime])
+        else:
+            raise ValueError("Unexpected z-coordinate for the photon. z should be >= 0.")
 
     def init_surface_and_channel(self, geometry):
         """
@@ -60,12 +73,13 @@ class Photon:
             self.direction = self.reflect(self.direction, normal)
             self.surface = surface
             self.channel = channel
+            self.surface_position = self.calculate_surface_position()
             
             # Calculate the incident angle
             reflectance = self.reflectance_calculator.get_reflectance(self.wavelength, incident_angle)
             # Determine if the photon is still active based on reflectance
             if np.random.random() > reflectance:
-                print(f'angle: {incident_angle/ np.pi} * pi and reflectance:{reflectance}')
+                #print(f'angle: {incident_angle/ np.pi} * pi and reflectance:{reflectance}')
                 self.status = 'hit'
         else:
             self.status = 'absorbed'
@@ -112,7 +126,7 @@ class Geometry:
 
 
 class BookGeometry(Geometry):
-    def __init__(self, angle_degrees, dcr_file=None):
+    def __init__(self, angle_degrees, fixed_eta=None, dcr_file=None):
         """
         Initialize the BookGeometry with the angle between the two squares
         and a csv file of DCR.
@@ -129,6 +143,7 @@ class BookGeometry(Geometry):
         if dcr_file and os.path.exists(dcr_file):
             self._read_dcr_from_csv(dcr_file)
         self._generate_cumulative_dcr()
+        self.fixed_eta = fixed_eta
 
     def _compute_square_planes(self):
         """
@@ -174,10 +189,28 @@ class BookGeometry(Geometry):
         sipm = channel_index // 16 + 1
         channel = channel_index % 16 + 1
         return self._random_position_in_channel(sipm, channel)
+    def random_light_event_position(self, channel_index, sigma):
+        sipm = channel_index // 16 + 1
+        channel = channel_index % 16 + 1
+        return self._random_gaussian_position_in_channel(sipm, channel, sigma)
 
     def _random_position_in_channel(self, sipm, channel):
         local_x = ((channel-1) % 4) * (self.square_size / 4) + np.random.random() * (self.square_size / 4)
         local_y = ((channel-1) // 4) * (self.square_size / 4) + np.random.random() * (self.square_size / 4)
+        if sipm == 1:
+            return np.array([local_x, local_y, 0])
+        else:
+            rotated_position = self._rotate_point_to_plane(np.array([local_x, local_y, 0]))
+            return rotated_position
+    def _random_gaussian_position_in_channel(self, sipm, channel, sigma):
+        # Calculate the center of the given channel
+        center_x = ((channel-1) % 4) * (self.square_size / 4) + (self.square_size / 8)
+        center_y = ((channel-1) // 4) * (self.square_size / 4) + (self.square_size / 8)
+
+        # Generate a random position around the center using a Gaussian distribution
+        local_x = np.random.normal(center_x, sigma)
+        local_y = np.random.normal(center_y, sigma)
+
         if sipm == 1:
             return np.array([local_x, local_y, 0])
         else:
@@ -207,7 +240,10 @@ class BookGeometry(Geometry):
         ## Randomly sample theta within the given angle
         #theta = np.random.uniform(0, angle)
         # Randomly sample theta within the given angle using a distribution that favors smaller angles
-        theta = np.arccos(np.random.uniform(np.cos(angle), 1))
+        if not self.fixed_eta is None:
+            theta = np.arccos(self.fixed_eta)
+        else:
+            theta = np.arccos(np.random.uniform(np.cos(angle), 1))
         #theta = np.arccos(np.cos(angle))
         # Uniformly sample phi between 0 and 2*pi
         phi = np.random.uniform(0, 2 * np.pi)
