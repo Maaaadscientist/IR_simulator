@@ -49,16 +49,17 @@ def generate_and_propagate_photons(x, y, z, event_idx, lambda_=5, pde=0.1, init_
     for _ in range(np.random.poisson(lambda_)):
         dx, dy, dz = geometry.generate_isotropic_direction(geometry.get_normal_at_position(np.array([x, y, z])))
         photon = Photon(x, y, z, dx, dy, dz, geometry)
+        #visualize_geometry(photon, geometry)
         surface_x, surface_y = photon.surface_position
         if init_fire:
             local_fired_channels.append((surface_x, surface_y, photon.surface, 1))  # Initial fire
             init_fire = False
         while photon.status == "active":
             photon.check_and_update_status(geometry)
+            #visualize_geometry(photon, geometry)
             if photon.status == 'hit':
                 if np.random.random() < pde:
                     surface_x, surface_y = photon.surface_position
-                    #visualize_geometry(photon, geometry)
                     
                     local_fired_channels.append((surface_x, surface_y, photon.surface, 0))  # Subsequent fires
                     x, y, z = photon.position
@@ -110,7 +111,7 @@ if ext != 0:
 
         fired_channels = []
         for _ in range(10):  # Expecting 10 photons per event
-            x, y, z = geometry.random_light_event_center(10, 2)
+            x, y, z = geometry.random_light_event_center(10, 1)
             fired_channels.extend(generate_and_propagate_photons(x, y, z, i))
 
         # Fill the TTree with aggregated data for this event
